@@ -1,13 +1,24 @@
 import sys
 import socket
 
+
 IPV4_MIN_OCTET_NUMBER = 1
 IPV4_MAX_OCTET_NUMBER = 200
 IPV6_MIN_OCTET_NUMBER = 1
 IPV6_MAX_OCTET_NUMBER = 9999
 
+ILLEGAL_INTERFACE = 0
+
+
+def get_tool_usage_string():
+    
+    return ("Usage: python ipv4_route_gen.py " +  
+            "<number of routes> <address-family> " + 
+            "<nexthop1> <nexthop2>...")
+
 
 def get_ipv4_static_route_config_string(**kwargs):
+
     first_octet = str(kwargs.get('first_octet', None))
     second_octet = str(kwargs.get('second_octet', None))
     third_octet = str(kwargs.get('third_octet', None))
@@ -142,7 +153,38 @@ def validate_interface_name(interface_name):
     if interface_name is None:
         return False
 
-    if '.' in interface_name:
+    try:
+        some_int = int(interface_name)
+    
+        if some_int <= ILLEGAL_INTERFACE:
+            return False
+    except:
+        return False
+
+    return True
+
+
+def validate_nexthop_ipv4(nexthop_ipv4):
+    if nexthop_ipv4 is None:
+        return False
+
+    try:
+        socket.inet_pton(socket.AF_INET, nexthop_ipv4)
+
+    except:
+        return False
+
+    return True
+
+
+def validate_nexthop_ipv6(nexthop_ipv6):
+    if nexthop_ipv6 is None:
+        return False
+
+    try:
+        socket.inet_pton(socket.AF_INET6, nexthop_ipv6)
+
+    except:
         return False
 
     return True
@@ -152,20 +194,17 @@ def validate_nexthop(nexthop):
 
     if nexthop is None:
         return False
+    
+    if validate_nexthop_ipv6(nexthop) is True:
+        return True
 
-    try:
-        socket.inet_pton(socket.AF_INET, nexthop)
+    if validate_nexthop_ipv4(nexthop) is True:
+        return True
 
-    except:
+    if validate_interface_name(nexthop) is True:
+        return True
 
-        try:
-            socket.inet_pton(socket.AF_INET6, nexthop)
-
-        except:
-            if validate_interface_name(nexthop) is False:
-                return False
-
-    return True
+    return False
 
 
 if __name__ == '__main__':
@@ -173,24 +212,27 @@ if __name__ == '__main__':
 
     if len(sys.argv) < 3:
 
-        print "Usage: python ipv4_route_gen.py <number of routes> <address-family> <nexthop1> <nexthop2>..."
-
+        print get_tool_usage_string()
+        
     else:
 
         nexthop_list = []
 
         if validate_route_count(sys.argv[1]) is False:
+            print get_tool_usage_string()
             assert False, "Invalid value of number of routes!!!"
 
         route_count = sys.argv[1]
 
         if validate_address_family(sys.argv[2]) is False:
+            print get_tool_usage_string()
             assert False, "Invalid address family!!!"
 
         if_ipv4 = if_address_family_is_ipv4(sys.argv[2])
 
         for nexthop_index in range(3, (len(sys.argv))):
             if validate_nexthop(sys.argv[nexthop_index]) is False:
+                print get_tool_usage_string()
                 assert False, "Invalid nexthop " + sys.argv[nexthop_index] + "!!!"
 
             nexthop_list.append(sys.argv[nexthop_index])
