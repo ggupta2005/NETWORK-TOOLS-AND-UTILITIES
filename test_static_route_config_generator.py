@@ -65,6 +65,8 @@ class test_static_route_config_generator(unittest.TestCase):
         self.assertEqual(validate_interface_name('1.1'), False)
         self.assertEqual(validate_interface_name('0'), False)
         self.assertEqual(validate_interface_name('-1'), False)
+        self.assertEqual(validate_interface_name('1.1.1.2'), False)
+        self.assertEqual(validate_interface_name('111:111::1'), False)
 
 
     def test_validate_nexthop_ipv4(self):
@@ -75,24 +77,94 @@ class test_static_route_config_generator(unittest.TestCase):
         self.assertEqual(validate_nexthop_ipv4('0.0.0.0'), True)
 
         # Negative test cases
+        self.assertEqual(validate_nexthop_ipv4(None), False)
         self.assertEqual(validate_nexthop_ipv4('1.1.1'), False)
         self.assertEqual(validate_nexthop_ipv4('some string'), False)
         self.assertEqual(validate_nexthop_ipv4('2'), False)
-        self.assertEqual(validate_nexthop_ipv4(None), False)
+        self.assertEqual(validate_nexthop_ipv4('111:111::1'), False)
 
 
-    def test_ipv4_addr_nexthop(self):
+    def test_validate_nexthop_ipv6(self):
+
+        # Positive test cases
+        self.assertEqual(validate_nexthop_ipv6('111:111::1'), True)
+        self.assertEqual(validate_nexthop_ipv6('1::1'), True)
+        self.assertEqual(validate_nexthop_ipv6('0::'), True)
+
+        # Negative test cases
+        self.assertEqual(validate_nexthop_ipv6(None), False)
+        self.assertEqual(validate_nexthop_ipv6('111::111::111'), False)
+        self.assertEqual(validate_nexthop_ipv6('some string'), False)
+        self.assertEqual(validate_nexthop_ipv6('2'), False)
+        self.assertEqual(validate_nexthop_ipv6('1.1.1.1'), False)
+
+
+    def test_validate_nexthop(self):
 
         # Positive test cases
         self.assertEqual(validate_nexthop('1.1.1.2'), True)
-        self.assertEqual(validate_nexthop('0.0.0.1'), True)
         self.assertEqual(validate_nexthop('2'), True)
+        self.assertEqual(validate_nexthop('111:111::1'), True)
 
         # Negative test cases
+        self.assertEqual(validate_nexthop(None), False)
         self.assertEqual(validate_nexthop('1.1.1'), False)
-        self.assertEqual(validate_nexthop('0.0.0.1'), True)
         self.assertEqual(validate_nexthop('some string'), False)
+        self.assertEqual(validate_nexthop('111::111::111'), False)
+        self.assertEqual(validate_nexthop('-1'), False)
+        self.assertEqual(validate_nexthop('0'), False)
    
+
+    def test_validate_route_count(self):
+
+        # Positive test cases
+        self.assertEqual(validate_route_count('1'), True)
+        self.assertEqual(validate_route_count('10'), True)
+        self.assertEqual(validate_route_count('100'), True)
+        self.assertEqual(validate_route_count(str(MAXIMUM_STATIC_ROUTES)), True)
+
+        # Negative test cases
+        self.assertEqual(validate_route_count(None), False)
+        self.assertEqual(validate_route_count('0'), False)
+        self.assertEqual(validate_route_count('-1'), False)
+        self.assertEqual(validate_route_count(str(MAXIMUM_STATIC_ROUTES + 1)), False)
+
+
+    def test_get_ipv4_static_route_config_string(self):
+
+        # Positive test cases
+        static_route_config = get_static_route_config_string(
+                                    first_octet='123', second_octet='0',
+                                    third_octet='0', fourth_octet='1',
+                                    if_ipv4=True, nexthop='1.1.1.5')
+        self.assertEqual(static_route_config, 
+                                    'ip route 123.0.0.1/32 1.1.1.5')
+
+        static_route_config = get_static_route_config_string(
+                                    first_octet='123', second_octet='0',
+                                    third_octet='0', fourth_octet='1',
+                                    if_ipv4=False, nexthop='111:111::1')
+        self.assertEqual(static_route_config, 
+                                'ipv6 route 123:0:0:1::1/128 111:111::1')
+
+        # Negative test cases
+        static_route_config = get_static_route_config_string(
+                                    first_octet=None, second_octet=None,
+                                    third_octet=None, fourth_octet=None,
+                                    if_ipv4=None, nexthop=None)
+        self.assertEqual(static_route_config, None)
+
+        static_route_config = get_static_route_config_string(
+                                    first_octet='3', second_octet='3',
+                                    third_octet='0', fourth_octet=None,
+                                    if_ipv4=True, nexthop='45')
+        self.assertEqual(static_route_config, None)
+
+        static_route_config = get_static_route_config_string(
+                                    first_octet='3', second_octet='3',
+                                    third_octet=None, fourth_octet='6',
+                                    if_ipv4=True, nexthop='45')
+        self.assertEqual(static_route_config, None)
 
 if __name__ == '__main__':
     unittest.main()

@@ -9,6 +9,8 @@ IPV6_MAX_OCTET_NUMBER = 9999
 
 ILLEGAL_INTERFACE = 0
 
+MAXIMUM_STATIC_ROUTES = 1000000
+
 
 def get_tool_usage_string():
     
@@ -17,13 +19,13 @@ def get_tool_usage_string():
             "<nexthop1> <nexthop2>...")
 
 
-def get_ipv4_static_route_config_string(**kwargs):
+def get_static_route_config_string(**kwargs):
 
     first_octet = str(kwargs.get('first_octet', None))
     second_octet = str(kwargs.get('second_octet', None))
     third_octet = str(kwargs.get('third_octet', None))
     fourth_octet = str(kwargs.get('fourth_octet', None))
-    if_ipv4 = str(kwargs.get('if_ipv4', False))
+    if_ipv4 = kwargs.get('if_ipv4', False)
 
     nexthop = str(kwargs.get('nexthop', None))
 
@@ -33,18 +35,30 @@ def get_ipv4_static_route_config_string(**kwargs):
         return None
 
     if if_ipv4 is True:
-        route_string = 'ip route %s.%s.%s.%s/%s %s' %(first_octet,
-                       second_octet, third_octet, fourth_octet , '32',
+        prefix_string = "%s.%s.%s.%s" %(first_octet, second_octet, 
+                        third_octet, fourth_octet)
+    else:
+        prefix_string = "%s:%s:%s:%s::1" %(first_octet, second_octet,
+                        third_octet, fourth_octet)
+
+    if validate_nexthop_ipv6(prefix_string) is False and \
+       validate_nexthop_ipv4(prefix_string) is False:
+        return None
+
+    if validate_nexthop(nexthop) is False:
+        return None
+
+    if if_ipv4 is True:
+        route_string = 'ip route %s/%s %s' %(prefix_string, '32',
                        nexthop)
     else:
-        route_string = 'ipv6 route %s:%s:%s:%s::1/%s %s' %(first_octet,
-                       second_octet, third_octet, fourth_octet , '128',
+        route_string = 'ipv6 route %s/%s %s' %(prefix_string, '128',
                        nexthop)
 
     return route_string
 
 
-def get_static_ipv4_route_by_count(if_ipv4, count, nexthop_list):
+def get_static_route_by_count(if_ipv4, count, nexthop_list):
 
     route_count = int(count)
 
@@ -78,7 +92,7 @@ def get_static_ipv4_route_by_count(if_ipv4, count, nexthop_list):
 
                     for nexthop_index in range(0, len(nexthop_list)):
 
-                        route_string = get_ipv4_static_route_config_string(
+                        route_string = get_static_route_config_string(
                                             first_octet=first_octet,
                                             second_octet=second_octet,
                                             third_octet=third_octet,
@@ -111,6 +125,9 @@ def validate_route_count(count):
     count_in_integer = int(count)
 
     if count_in_integer <= 0:
+        return False
+
+    if count_in_integer > MAXIMUM_STATIC_ROUTES:
         return False
 
     return True
@@ -238,5 +255,5 @@ if __name__ == '__main__':
             nexthop_list.append(sys.argv[nexthop_index])
 
         print nexthop_list
-        get_static_ipv4_route_by_count(if_ipv4, route_count, nexthop_list)
+        get_static_route_by_count(if_ipv4, route_count, nexthop_list)
 
