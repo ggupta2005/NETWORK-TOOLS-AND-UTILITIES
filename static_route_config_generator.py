@@ -13,9 +13,9 @@ MAXIMUM_STATIC_ROUTES = 1000000
 
 
 def get_tool_usage_string():
-    
-    return ("Usage: python ipv4_route_gen.py " +  
-            "<number of routes> <address-family> " + 
+
+    return ("Usage: python ipv4_route_gen.py " +
+            "<number of routes> <address-family> " +
             "<nexthop1> <nexthop2>...")
 
 
@@ -35,7 +35,7 @@ def get_static_route_config_string(**kwargs):
         return None
 
     if if_ipv4 is True:
-        prefix_string = "%s.%s.%s.%s" %(first_octet, second_octet, 
+        prefix_string = "%s.%s.%s.%s" %(first_octet, second_octet,
                         third_octet, fourth_octet)
     else:
         prefix_string = "%s:%s:%s:%s::1" %(first_octet, second_octet,
@@ -172,7 +172,7 @@ def validate_interface_name(interface_name):
 
     try:
         some_int = int(interface_name)
-    
+
         if some_int <= ILLEGAL_INTERFACE:
             return False
     except:
@@ -211,7 +211,7 @@ def validate_nexthop(nexthop):
 
     if nexthop is None:
         return False
-    
+
     if validate_nexthop_ipv6(nexthop) is True:
         return True
 
@@ -230,7 +230,7 @@ if __name__ == '__main__':
     if len(sys.argv) < 3:
 
         print get_tool_usage_string()
-        
+
     else:
 
         nexthop_list = []
